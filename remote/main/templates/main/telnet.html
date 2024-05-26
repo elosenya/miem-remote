@@ -1,0 +1,257 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MIEM Remote</title>
+    {% load static %}
+    <link href="{% static 'bootstrap.css' %}" rel="stylesheet">
+  </head>
+  <body>
+
+  <header class="p-3 mb-3 border-bottom" style="background: rgb(22, 43, 99); color: white;">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+            <li><span class="fs-4">Удаленный доступ</span></li>
+        </ul>
+        <!------------------------------------------------------------------------->
+        {% if login %}
+        <span class="fs-4" style="margin-right: 1%;">{{ username }}</span>
+        <div class="dropdown text-end">
+          <a href="#" tabindex="-1" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small">
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Выйти</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <span class="fs-4" style="margin-right: 1%;"><a href="{% url 'login' %}">Войти</a> </span>
+        {%endif%}
+        <!------------------------------------------------------------------------->
+      </div>
+    </div>
+  </header>
+  <input value="{{ quit_str }}" id="quit_str" type="hidden">
+  <div class="col-lg-8 mx-auto p-4 py-md-5">
+    <main>
+      <pre>
+        <code id="telnet_output">
+
+          {{ history }}
+        </code>
+
+          <input autocomplete="off" type="text" id="command_line" tabindex="-1" autofocus style="width: 70%"/>
+          <code> Для выхода введите {{quit_str}}</code>
+           <code id="remain_str" style="color: darkgrey"></code>
+        <input type="hidden" value="{{start_time}}" name="start_time" id="start_time">
+        <input type="hidden" value="{{session_time}}" name="session_time" id="session_time">
+      </pre>
+
+    </main>
+  </div>
+  <script>
+    const session_time = parseInt(document.getElementById("session_time").value);
+    const read_interval = 0;
+    function isCharNumber(c) {
+      return c >= '0' && c <= '9';
+    }
+    function CreateRequest()
+      {
+
+          var Request = false;
+
+          if (window.XMLHttpRequest)
+          {
+              Request = new XMLHttpRequest();
+          }
+          else if (window.ActiveXObject)
+          {
+              try
+              {
+                   Request = new ActiveXObject("Microsoft.XMLHTTP");
+              }
+              catch (CatchException)
+              {
+                   Request = new ActiveXObject("Msxml2.XMLHTTP");
+              }
+          }
+
+          if (!Request)
+          {
+              alert("Невозможно создать XMLHttpRequest");
+          }
+
+          return Request;
+      }
+    function SendRequest(r_method, r_path, r_args, r_handler)
+      {
+          var Request = CreateRequest();
+          if (!Request)
+          {
+              return Request;
+          }
+          Request.onreadystatechange = function()
+          {
+              if (Request.readyState == 4)
+              {
+                  r_handler(Request);
+              }
+          }
+          if (r_method.toLowerCase() == "get" && r_args.length > 0)
+          r_path += "?" + r_args;
+          Request.open(r_method, r_path, true);
+
+          if (r_method.toLowerCase() == "post")
+          {
+              Request.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
+              Request.send(r_args);
+          }
+          else
+          {
+              Request.send(null);
+          }
+          return Request;
+      }
+
+    function telnet_read(){
+      command_line.disabled = false;
+      command_line.focus();
+      clearInterval(refreshInterval)
+        let Handler = function(Request){
+          let json = JSON.parse(Request.responseText);
+          let str = "";
+          str = json[0];
+          let status = json[1]
+          if (status === -1){
+            telnet_write(quit_str + '\r\n');
+            //window.location.href = "{% url 'devices_page' %}";
+            return
+          }
+          str = str.replaceAll('\b \b', '\b')
+          console.log(str);
+          let n = 0;
+          for (let i = str.length - 1; i >= 0; i--){
+            if (str[i] !== '\x08') break
+            n++;
+          }
+          if (n > 0) n -= 1;
+          if (n !== 0) str = str.slice(0, -n);
+          output.textContent += str;
+
+          while(output.textContent.indexOf("\x08") !== -1) {
+            if (output.textContent.indexOf("\x08") === 0) {
+              output.textContent.replace("\x08", "");
+            }
+            output.textContent = output.textContent.replace(/[^\x08]\x08/, "");
+          }
+          command_line.value = output.textContent.slice(output.textContent.length - n)
+          output.textContent =  output.textContent.slice(0, output.textContent.length - n)
+          refreshInterval = setInterval(telnet_read, read_interval);
+        }
+      SendRequest("GET",'/telnet_read_new', "cmd=", Handler);
+    }
+    function telnet_write(str){
+      command_line.disabled = true;
+      let Handler = function (Request){
+        if (str.trim().replaceAll('\r\n', '') === quit_str){
+          window.location.href = "{% url 'devices_page' %}";
+        }
+      }
+      SendRequest("GET",'/telnet_write_new', "cmd="+str.replaceAll(" ", "%20").replaceAll("\n", '%0A').replaceAll('\t',"%09").replaceAll('\r', '%0D'), Handler);
+    }
+
+      let output = document.getElementById('telnet_output');
+      let command_line = document.getElementById('command_line');
+      let quit_str = document.getElementById('quit_str').value
+      let start_time = parseInt(document.getElementById('start_time').value);
+      let remain_str = document.getElementById('remain_str');
+      let cmd_history = [];
+      let i_hist = 0;
+      command_line.focus();
+      let remain = start_time + session_time - Math.floor(Date.now()/1000);
+      remain_str.textContent = "Осталось " + (Math.floor(remain / 60)) + "м. " + (remain % 60) + "c.";
+      refresh_remain = setInterval(() => {
+        if(remain === 0){
+          telnet_write(quit_str + "\r\n");
+        }
+        remain -= 1;
+        remain_str.textContent = "Осталось " + (Math.floor(remain / 60)) + "м. " + (remain % 60) + "c.";
+      }, 1000);
+      // Дудосим сервер на наличие новых данных
+      let refreshInterval = setInterval(telnet_read, read_interval);
+
+      // Подгружаем историю введенных команд
+      let Handler = function(Request){
+          cmd_history = JSON.parse(Request.responseText).reverse();
+      }
+      SendRequest("GET",'/telnet_cmd_hist', "cmd="+command_line.value, Handler);
+
+
+      document.addEventListener('keydown', function(event) {
+        if(event.key === 'Tab') {
+          if(event.target.getAttribute('tabindex') === '-1') {
+            event.preventDefault();
+          }
+          if(document.activeElement === command_line){
+            // Обработка Tab
+            telnet_write(command_line.value + '\t')
+          }
+      }
+      });
+
+      document.addEventListener('copy', function (e) {
+        if (document.activeElement === command_line){
+          // Обработка Ctrl+C
+            command_line.value = "^C";
+            telnet_write(command_line.value)
+          }
+      });
+
+      command_line.addEventListener('keypress', function (e) {
+          var key = e.which || e.keyCode;
+          // Обработка Enter
+          if (key === 13) { // код клавиши Enter
+              telnet_write(command_line.value + '\r\n')
+              if (command_line.value !== "") cmd_history.unshift(command_line.value);
+          }
+      });
+
+      // Стрелочки вверх и вниз (история)
+      command_line.addEventListener('keydown', function (e) {
+        if(cmd_history.length > 0){
+          if(e.key === "ArrowUp"){
+            command_line.value = cmd_history[i_hist]
+
+            if(i_hist < cmd_history.length - 1)
+              i_hist += 1;
+
+            command_line.selectionStart = command_line.value.length
+          }
+          if(e.key === "ArrowDown"){
+            if(i_hist === 0){
+              command_line.value = "";
+              return;
+            }
+            if(i_hist > 0)
+              i_hist -= 1;
+            command_line.value = cmd_history[i_hist];
+          }
+
+        }
+
+        //перед тем как закрыть страничку закинуть всю историю на сервер
+        window.onbeforeunload = function (){
+
+        }
+
+      });
+
+
+  </script>
+
+    <script src="{% static 'bootstrap.js' %}"></script>
+  </body>
+</html>

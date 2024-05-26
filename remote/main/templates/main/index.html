@@ -1,0 +1,69 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MIEM Remote</title>
+    {% load static %}
+    <link href="{% static 'bootstrap.css' %}" rel="stylesheet">
+  </head>
+  <body>
+
+  <header class="p-3 mb-3 border-bottom" style="background: rgb(22, 43, 99); color: white;">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+            <li><span class="fs-4 p-3 nav-link " style="color:white;">Главная</span></li>
+        </ul>
+        <!------------------------------------------------------------------------->
+        {% if login %}
+        <span class="fs-4" style="margin-right: 1%;">{{ username }}</span>
+        <div class="dropdown text-end">
+          <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small">
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Выйти</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <span class="fs-4" style="margin-right: 1%;"><a href="{% url 'login' %}">Войти</a> </span>
+        {%endif%}
+        <!------------------------------------------------------------------------->
+      </div>
+    </div>
+  </header>
+
+  <div class="col-lg-8 mx-auto p-4 py-md-5">
+    <main>
+      <h1 style="color: rgb(22, 43, 99); white-space: nowrap;" align="center">Добро пожаловать в виртуальную <br>лабораторию сетевых технологий!</h1>
+      <h2 align="center" style="color: black; white-space:nowrap; margin-top: 1em"> Выберите одну из опций ниже</h2>
+
+      <div class="row g-5" style="margin-top: 1em;">
+      <div class="col-md-6">
+
+        <a href="{% url 'devices_page' %}">
+          <h2 align="center" class="rounded-pill" style="background: rgb(22, 43, 99); color:white; width:100%; padding:2em">Перейти к удаленному доступу</h2>
+        </a>
+        <p style="margin-left:3em; margin-right:3em; margin-top:1em">Выберите этот вариант, если хотите получить реальный удаленный доступ к устройствам в стойке лаборатории</p>
+
+      </div>
+
+      <div class="col-md-6">
+        <!--<a href="http://kyky.6u6u.ru:8081/store/public/auth/login/offline">-->
+        <a href = "/pnet">
+          <h2 align="center" class="rounded-pill" style="background: rgb(22, 43, 99); color:white; width:100%; padding:2em;">Открыть PNetLab</h2>
+        </a>
+        <p style="margin-left:3em; margin-right:3em; margin-top:1em">Выберите этот вариант, если хотите протестировать лабораторную работу или поставить любой эксперимент</p>
+      </div>
+    </div>
+
+    <div align="center">
+        <a href="{% url 'database' %}">Открыть базу знаний по курсу "Администрирование систем и сетей"</a>
+    </div>
+    </main>
+  </div>
+    <script src="{% static 'bootstrap.js' %}"></script>
+  </body>
+</html>

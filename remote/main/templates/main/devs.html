@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MIEM Remote</title>
+    {% load static %}
+    <link href="{% static 'bootstrap.css' %}" rel="stylesheet">
+  </head>
+  <body>
+
+  <header class="p-3 mb-3 border-bottom" style="background: rgb(22, 43, 99); color: white;">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+
+          <li><a class="nav-link link-secondary fs-4 p-3" href="{% url 'index'%}"> На главную</a></li>
+        </ul>
+        <!------------------------------------------------------------------------->
+        {% if login %}
+        <span class="fs-4" style="margin-right: 1%;">{{ username }}</span>
+        <div class="dropdown text-end">
+          <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small">
+
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Выйти</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <span class="fs-4" style="margin-right: 1%;"><a href="{% url 'login' %}">Войти</a> </span>
+        {%endif%}
+        <!------------------------------------------------------------------------->
+      </div>
+    </div>
+  </header>
+  <div class="col-lg-8 mx-auto p-4 py-md-5">
+    <main>
+
+      <h1 class="text-body-emphasis">Устройства</h1>
+        {% for device in devices %}
+        {%if device.busy %}
+          {%if session == device.session%}
+            <a href="{% url 'telnet' %}?id={{forloop.counter0}}" id="{{forloop.counter0}}">{{device.name}}  (Запущено)</a>
+          {%else%}
+            <a href=""  class="link-secondary" id="{{forloop.counter0}}">{{device.name}}  (Занято)</a>
+          {%endif%}
+        {% else %}
+          <a href="{% url 'telnet' %}?id={{forloop.counter0}}" id="{{forloop.counter0}}">{{device.name}}</a>
+        {%endif%}
+      <br>
+        {%endfor%}
+
+    </main>
+  </div>
+  <script src="{% static 'bootstrap.js' %}"></script>
+  </body>
+</html>
+<script>
+  function CreateRequest()
+      {
+
+          var Request = false;
+
+          if (window.XMLHttpRequest)
+          {
+              Request = new XMLHttpRequest();
+          }
+          else if (window.ActiveXObject)
+          {
+              try
+              {
+                   Request = new ActiveXObject("Microsoft.XMLHTTP");
+              }
+              catch (CatchException)
+              {
+                   Request = new ActiveXObject("Msxml2.XMLHTTP");
+              }
+          }
+
+          if (!Request)
+          {
+              alert("Невозможно создать XMLHttpRequest");
+          }
+
+          return Request;
+      }
+    function SendRequest(r_method, r_path, r_args, r_handler)
+      {
+          var Request = CreateRequest();
+          if (!Request)
+          {
+              return Request;
+          }
+          Request.onreadystatechange = function()
+          {
+              if (Request.readyState == 4)
+              {
+                  r_handler(Request);
+              }
+          }
+          if (r_method.toLowerCase() == "get" && r_args.length > 0)
+          r_path += "?" + r_args;
+          Request.open(r_method, r_path, true);
+
+          if (r_method.toLowerCase() == "post")
+          {
+              Request.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
+              Request.send(r_args);
+          }
+          else
+          {
+              Request.send(null);
+          }
+          return Request;
+      }
+
+  let devs = [];
+  let names = [];
+  let handler = function(Request){
+    devs = JSON.parse(Request.responseText)[0];
+    names = JSON.parse(Request.responseText)[1];
+  }
+  SendRequest("GET", "/devs_update", "", handler);
+  let refreshInterval = setInterval(refresh, 0);
+  function refresh() {
+    clearInterval(refreshInterval);
+    let handler = function(Request){
+      devs = JSON.parse(Request.responseText)[0];
+      for (let i = 0; i < devs.length; i++) {
+        let h = document.getElementById(i.toString())
+        if (devs[i] === false){
+          h.textContent = names[i];
+          h.href = "{% url 'telnet' %}?id=" + i.toString();
+        } else {
+          h.textContent = names[i] + ' (Занято)';
+          h.href = "";
+        }
+      }
+      refreshInterval = setInterval(refresh, 0);
+    }
+    SendRequest("GET", "/devs_update?wait=1", "", handler);
+  }
+</script>
+

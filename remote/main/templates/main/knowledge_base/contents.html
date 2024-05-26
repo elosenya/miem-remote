@@ -1,0 +1,29 @@
+{% extends "main/base.html" %}
+{% load static %}
+{% block content%}
+
+  <div class="col-lg-8 mx-auto p-4 py-md-5">
+    <main>
+
+      <h1 class="text-body-emphasis">База знаний</h1>
+            <a href="?id=0">Глава 0: Знакомство с виртуальной лабораторией</a><br>
+            <a href="?id=1">Глава 1: Введение в сетевые технологии</a><br>
+            <a href="?id=2">Глава 2: Знакомство с оборудованием</a><br>
+            <a href="?id=3">Глава 3: Модель OSI и TCP/IP</a><br>
+            <a href="?id=4">Глава 4: Принципы адресации в сетях</a><br>
+            <a href="?id=5">Глава 5: Маршрутизация: введение в протоколы маршрутизации</a><br>
+            <a href="?id=6">Глава 6: Коммутация и виртуальные локальные сети</a><br>
+            <a href="?id=7">Глава 7: Методы обеспечения безопасности сети и сетевого оборудования</a><br>
+            <a href="?id=8">Глава 8: Протоколы Telnet и SSH</a><br>
+            <a href="?id=9">Глава 9: Введение в DNS</a><br>
+            <a href="?id=10">Глава 10: Технологии VPN, NAT</a><br>
+            <a href="?id=11">Глава 11: Списки уровней доступа - ACL</a><br>
+            <a href="?id=12">Глава 12: Введение в Quality of Service - QoS</a><br>
+            <a href="?id=13">Глава 13: IPv6 - переход и реализация</a><br>
+            <a href="?id=14">Глава 14: Wireless LAN, Wi-Fi</a><br>
+            <a href="?id=15">Глава 15: Анализ сетевого трафика</a><br>
+      <img src="{% static 'knowledge_base/Логотип_МИЭМ.svg' %}" class="img-fluid m-5 mx-auto d-block w-25">
+    </main>
+  </div>
+
+{% endblock content %}

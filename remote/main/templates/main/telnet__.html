@@ -1,0 +1,287 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MIEM Remote</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  </head>
+  <body>
+
+  <header class="p-3 mb-3 border-bottom" style="background: rgb(22, 43, 99); color: white;">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+            <li><span class="fs-4">Удаленный доступ</span></li>
+        </ul>
+        <!------------------------------------------------------------------------->
+        {% if login %}
+        <span class="fs-4" style="margin-right: 1%;">{{ username }}</span>
+        <div class="dropdown text-end">
+          <a href="#" tabindex="-1" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small">
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Выйти</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <span class="fs-4" style="margin-right: 1%;"><a href="{% url 'login' %}">Войти</a> </span>
+        {%endif%}
+        <!------------------------------------------------------------------------->
+      </div>
+    </div>
+  </header>
+  <input value="{{ quit_str }}" id="quit_str" type="hidden">
+  <div class="col-lg-8 mx-auto p-4 py-md-5">
+    <main>
+      <pre>
+        <code id="telnet_output">
+
+          {{ history }}
+        </code>
+
+          <input autocomplete="off" type="text" id="command_line" tabindex="-1" autofocus style="width: 70%"/>
+      </pre>
+
+    </main>
+  </div>
+  <script>
+    const read_interval = 0;
+    function isCharNumber(c) {
+      return c >= '0' && c <= '9';
+    }
+    function updateText(url){
+      command_line.disabled = true;
+
+      clearInterval(refreshInterval)
+      var Handler = function(Request){
+        const json = JSON.parse(Request.responseText);
+        let str = "";
+        const n = json[1];
+        str = json[0];
+        if (str !== "") {
+          str = str.replaceAll("\r\u001b[9999B", "").replaceAll("\u001b7\u001b[r\u001b8", "");
+
+          console.log(str)
+          while (str.indexOf("\u001b[") !== -1) {
+            let num = "";
+            let i = str.indexOf("\u001b[") + 2;
+            while (isCharNumber(str[i])) {
+              num += str[i];
+              i++;
+            }
+            num = parseInt(num)
+
+
+            console.log(num)
+            let slashb_str = ""
+            for (let j = 0; j < num; j++) {
+              slashb_str += '\b';
+            }
+            str = str.slice(0, str.indexOf("\u001b[")) + slashb_str + str.slice(i + 1);
+            console.log(str);
+          }
+
+          while (str.indexOf('\b') !== -1) {
+            if (str.indexOf('\b') === 0) {
+              str.slice(1);
+              continue;
+            }
+            str = str.slice(0, str.indexOf('\b') - 1) + str.slice(str.indexOf('\b') + 1);
+          }
+          console.log(str)
+          output.textContent += str.slice(0, str.length - n);
+          command_line.value = str.slice(str.length - n)
+        }
+        command_line.disabled = false;
+        command_line.focus();
+        refreshInterval = setInterval(telnet_read, read_interval);
+
+      }
+
+      SendRequest("GET",url, "cmd="+command_line.value.replaceAll(' ', '%20'), Handler);
+      if(command_line.value.trimStart().startsWith(quit_str)){
+        window.location.replace("{% url 'devices_page' %}")
+      }
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if(event.key === 'Tab') {
+          if(event.target.getAttribute('tabindex') === '-1') {
+            event.preventDefault();
+          }
+          if(document.activeElement === command_line){
+            updateText('telnet_tab')
+          }
+      }
+    });
+
+      let output = document.getElementById('telnet_output');
+      var command_line = document.getElementById('command_line');
+      output.textContent = output.textContent.replaceAll("\x1b[9999B", "").replaceAll("\x1b7\x1b[r\x1b8", "").replaceAll("\x1b[K", "");
+      command_line.focus();
+
+
+      function CreateRequest()
+      {
+
+          var Request = false;
+
+          if (window.XMLHttpRequest)
+          {
+              //Gecko-совместимые браузеры, Safari, Konqueror
+              Request = new XMLHttpRequest();
+          }
+          else if (window.ActiveXObject)
+          {
+              //Internet explorer
+              try
+              {
+                   Request = new ActiveXObject("Microsoft.XMLHTTP");
+              }
+              catch (CatchException)
+              {
+                   Request = new ActiveXObject("Msxml2.XMLHTTP");
+              }
+          }
+
+          if (!Request)
+          {
+              alert("Невозможно создать XMLHttpRequest");
+          }
+
+          return Request;
+      }
+      function SendRequest(r_method, r_path, r_args, r_handler)
+      {
+          //Создаём запрос
+          var Request = CreateRequest();
+          //Проверяем существование запроса еще раз
+          if (!Request)
+          {
+              return Request;
+          }
+
+          //Назначаем пользовательский обработчик
+          Request.onreadystatechange = function()
+          {
+              //Если обмен данными завершен
+              if (Request.readyState == 4)
+              {
+                  //Передаем управление обработчику пользователя
+                  r_handler(Request);
+              }
+          }
+
+          //Проверяем, если требуется сделать GET-запрос
+          if (r_method.toLowerCase() == "get" && r_args.length > 0)
+          r_path += "?" + r_args;
+
+          //Инициализируем соединение
+          Request.open(r_method, r_path, true);
+
+          if (r_method.toLowerCase() == "post")
+          {
+              //Если это POST-запрос
+
+              //Устанавливаем заголовок
+              Request.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
+              //Посылаем запрос
+              Request.send(r_args);
+          }
+          else
+          {
+              //Если это GET-запрос
+
+              //Посылаем нуль-запрос
+              Request.send(null);
+          }
+          return Request;
+      }
+      quit_str = document.getElementById('quit_str').value
+      var cmd_history = [];
+      var i_hist = 0;
+      var Handler = function(Request){
+          cmd_history = JSON.parse(Request.responseText).reverse();
+      }
+      SendRequest("GET",'/telnet_cmd_hist', "cmd="+command_line.value, Handler);
+
+      function update() {
+        command_line.disabled = true;
+        i_hist = 0;
+        if(command_line.value[0] !== '^' && command_line.value !== ""){
+          cmd_history.unshift(command_line.value);
+        }
+        updateText('/telnet_update')
+      }
+      let READ_REQUEST;
+      function telnet_read() {
+        var Handler = function(Request){
+          var json = JSON.parse(Request.responseText)
+          var msg = json[0]
+          var n = json[1]
+          output.textContent += msg.replaceAll("\x1b[9999B", "").replaceAll("\x1b7\x1b[r\x1b8", "").replaceAll("\x1b[K", "");
+        }
+        READ_REQUEST = SendRequest("GET",'/telnet_read', "", Handler);
+      }
+      telnet_read();
+      var refreshInterval = setInterval(telnet_read, read_interval);
+      var ctrlDown = false;
+      var ctrlKey = 17;
+      var cmdKey = 91;
+      var vKey = 86;
+      var cKey = 99;
+
+      window.addEventListener('keydown',function(e) {
+          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = true;
+
+      });
+      window.addEventListener('keyup',function(e) {
+          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = false;
+      });
+
+
+      command_line.addEventListener('keypress', function (e) {
+          var key = e.which || e.keyCode;
+          if (key === 13) { // код клавиши Enter
+              update();
+          }
+      });
+      command_line.addEventListener('keydown', function (e) {
+        if(cmd_history.length > 0){
+          if(e.key === "ArrowUp"){
+            command_line.value = cmd_history[i_hist]
+            if(i_hist < cmd_history.length - 1)
+              i_hist += 1;
+
+            command_line.selectionStart = command_line.value.length
+          }
+          if(e.key === "ArrowDown"){
+            if(i_hist === 0){
+              command_line.value = "";
+              return;
+            }
+            if(i_hist > 0)
+              i_hist -= 1;
+            command_line.value = cmd_history[i_hist];
+          }
+
+        }
+
+      });
+      document.addEventListener('copy', function (e) {
+        if (document.activeElement === command_line){
+            command_line.value = "^C";
+            update();
+          }
+      });
+
+
+      command_line.value = "";
+  </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>

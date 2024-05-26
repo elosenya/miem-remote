@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MIEM Remote</title>
+    {% load static %}
+    <link href="{% static 'bootstrap.css' %}" rel="stylesheet">
+  </head>
+  <body>
+
+  <header class="p-3 mb-3 border-bottom" style="background: rgb(22, 43, 99); color: white;">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+
+          <li>{%block backbutton%}<a class="nav-link link-secondary fs-4 p-3" href="{% url 'index'%}">На главную</a>{%endblock backbutton%}</li>
+        </ul>
+        <!------------------------------------------------------------------------->
+        {% if login %}
+        <span class="fs-4" style="margin-right: 1%;">{{ username }}</span>
+        <div class="dropdown text-end">
+          <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small">
+
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Выйти</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <span class="fs-4" style="margin-right: 1%;"><a href="{% url 'login' %}">Войти</a> </span>
+        {%endif%}
+        <!------------------------------------------------------------------------->
+      </div>
+    </div>
+  </header>
+      {% block content%}{% endblock content %}
+      {{ nav }}
+    <script src="{% static 'bootstrap.js' %}"></script>
+  </body>
+</html>
